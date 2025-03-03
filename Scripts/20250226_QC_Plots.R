@@ -1,6 +1,7 @@
 #Author: Rogelio Aguilar
 #Project: Spatial Dietary Project
-#Objective: Apply BANKSY normalization to filtered Visium spatial objects
+#Objective: To BANKSY normalized Visium spatial objects, visualize gene, feature,
+# and dimensional reduction plots.
 
 
 #Set working directory

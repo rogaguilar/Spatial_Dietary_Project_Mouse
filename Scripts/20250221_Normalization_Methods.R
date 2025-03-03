@@ -175,7 +175,7 @@ lapply(slides, function(slide) {
   sapply(sample.df$Sample, function(sample_name) {
     normalized.obj <- banksy.normalization(filt.obj, sample_name)
     cat(paste("Saving RDS","\n",sep = " "))
-    saveRDS(normalized.obj, file = paste("./Analysis/BANKSY_Normalized/",
+    saveRDS(normalized.obj, file = paste("./Analysis/BANKSY_Normalized/Seurat_Objects",
                               slide,"_",sample_name,".rds",sep = ""))
     #QC plotting
     qc.plotting(spatial_object = normalized.obj, sample_name = sample_name)
