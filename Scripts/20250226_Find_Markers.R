@@ -16,13 +16,19 @@ lapply(packages,library, character.only=TRUE)
 csv <- read.csv(file = "./Visium_Mouse_Tumor_MycCap_Slide_Samples.csv")
 slides <- unique(csv$Slide_Number)
 
+output.dir <- "./Analysis/BANKSY_Normalized_QC_Filtered/Cluster_Markers"
+
+if (!dir.exists(output.dir)) {
+  dir.create(output.dir, recursive = TRUE)
+}
+
 #Data Filtering and Processing####
 lapply(slides, function(slide) {
   sample.df <- csv %>% filter(Slide_Number == slide)
   #Load BANKSY normalized object and find all markers for each cluster
   sapply(sample.df$Sample, function(sample_name) {
     cat(paste("Loading object for ", sample_name,"\n",sep = ""))
-    normalized.obj <- readRDS(file = paste("./Analysis/BANKSY_Normalized/",
+    normalized.obj <- readRDS(file = paste("./Analysis/BANKSY_Normalized_QC_Filtered/",
                                            slide,"_",sample_name,".rds",sep = ""))
     Idents(normalized.obj) <- "BANKSY_snn_res.0.5"
     #Find markers 
@@ -30,7 +36,7 @@ lapply(slides, function(slide) {
                               only.pos = TRUE, min.pct = 0.25, 
                               logfc.threshold = 0.25)
     #Save as CSV file
-    write_csv(x = markers, file = paste("./Analysis/BANKSY_Normalized/",slide,"_",
+    write_csv(x = markers, file = paste("./Analysis/BANKSY_Normalized_QC_Filtered/Cluster_Markers/",slide,"_",
                                         sample_name,"_all_markers.csv",sep = ""))
     #Remove object and markers data frame to prevent memory overage on server
     rm(normalized.obj,markers)

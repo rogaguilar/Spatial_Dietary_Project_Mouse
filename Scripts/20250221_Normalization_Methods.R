@@ -67,6 +67,9 @@ banksy.normalization <- function(spatial_object, sample_name) {
   obj <- subset(spatial_object,idents = sample_name)
   #Add mitochondrial percentage
   obj[['percent.mt']] <- PercentageFeatureSet(obj, pattern = '^MT-')
+  obj <- subset(obj, percent.mt < 10 &
+                  nCount_Spatial.008um > 25)
+  
   #Normalize data and find variable genes
   obj %<>% NormalizeData(.) %>%
     FindVariableFeatures(., verbose = TRUE) %>% 
@@ -82,8 +85,8 @@ banksy.normalization <- function(spatial_object, sample_name) {
   
   cat(paste("PCA for",sample_name, "\n",sep = " "))
   obj <- RunPCA(obj, assay = "BANKSY", reduction.name = "pca.banksy", 
-                features = rownames(obj), npcs = 30)
-  obj <- RunUMAP(obj,dims = 1:15,reduction = "pca.banksy")
+                features = rownames(obj), npcs = 30, seed.use = 100)
+  obj <- RunUMAP(obj,dims = 1:15,reduction = "pca.banksy", seed.use = 100)
   obj <- FindNeighbors(obj, reduction = "pca.banksy", dims = 1:15)
   obj <- FindClusters(obj, resolution = c(0.5,0.8,1))
   Idents(obj) <- "banksy_cluster"
@@ -94,9 +97,9 @@ banksy.normalization <- function(spatial_object, sample_name) {
 #Input: Seurat object for a slide with bin size 8um and sample's name
 #Output: Statement of processed object completion
 #Description:
-qc.plotting <- function(spatial_object, sample_name) {
+qc.plotting <- function(spatial_object, sample_name, slide_number) {
   #PDF output naming
-  pdf(file = paste("./Analysis/Plots/",sample_name,"_QC_plots.pdf",sep = ""), 
+  pdf(file = paste("./Analysis/BANKSY_Normalized_QC_Filtered/Plots/",sample_name,"_QC_plots.pdf",sep = ""), 
       width=8.5, height=11,paper = "USr")
   
   #Violin plots of UMIs, genes, and mitochondrial percentage and PCA elbow plot
@@ -112,14 +115,14 @@ qc.plotting <- function(spatial_object, sample_name) {
   #Resolution UMAP plots
   res.plots <- wrap_plots(DimPlot(spatial_object,
                                   group.by = "BANKSY_snn_res.0.5", reduction = "umap") + 
-                           theme(legend.position = "bottom"),
-             DimPlot(spatial_object,
-                     group.by = "BANKSY_snn_res.0.8", reduction = "umap") + 
-               theme(legend.position = "bottom"),
-             DimPlot(spatial_object,
-                     group.by = "BANKSY_snn_res.1", reduction = "umap") + 
-               theme(legend.position = "bottom")
-             )
+                            theme(legend.position = "bottom"),
+                          DimPlot(spatial_object,
+                                  group.by = "BANKSY_snn_res.0.8", reduction = "umap") + 
+                            theme(legend.position = "bottom"),
+                          DimPlot(spatial_object,
+                                  group.by = "BANKSY_snn_res.1", reduction = "umap") + 
+                            theme(legend.position = "bottom")
+  )
   print(res.plots)
   #Spatial distribution of cluster plots 
   dim.plots <- wrap_plots(
@@ -156,7 +159,7 @@ lapply(slides, function(slide) {
   
   #Directory contains read count matrix and image data in a sub directory `spatial`.
   slide.obj <- Load10X_Spatial(data.dir = paste("./BANOSSM_SSM0015_1_PR_Whole_C1_VISHD_",
-                                        slide,"_22WJCYLT3/outs/",sep = ""), 
+                                                slide,"_22WJCYLT3/outs/",sep = ""), 
                                bin.size=8)
   
   #Filter object for spots within Loupe browser annotations
@@ -175,10 +178,12 @@ lapply(slides, function(slide) {
   sapply(sample.df$Sample, function(sample_name) {
     normalized.obj <- banksy.normalization(filt.obj, sample_name)
     cat(paste("Saving RDS","\n",sep = " "))
-    saveRDS(normalized.obj, file = paste("./Analysis/BANKSY_Normalized/Seurat_Objects",
-                              slide,"_",sample_name,".rds",sep = ""))
+    saveRDS(normalized.obj, file = paste("./Analysis/BANKSY_Normalized_QC_Filtered/",
+                                         slide,"_",sample_name,".rds",sep = ""))
     #QC plotting
-    qc.plotting(spatial_object = normalized.obj, sample_name = sample_name)
+    qc.plotting(spatial_object = normalized.obj, 
+                sample_name = sample_name,
+                slide_number = slide)
     
     rm(normalized.obj)
     
@@ -188,7 +193,3 @@ lapply(slides, function(slide) {
   rm(filt.obj)
   return(cat(paste("Saved seurat objects and plots for",slide,"\n",sep = "")))
 })
-
-
-
-
