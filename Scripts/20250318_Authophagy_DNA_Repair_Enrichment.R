@@ -125,11 +125,11 @@ rownames(gene.df) <- gene.df$Gene
 annotation.row <- select(gene.df,Pathway)
 
 #Plot z-score as heat map
-pheatmap(mat=z.score[c(homologous.genes,NHEJ.genes,"Ar"),], 
+pheatmap(mat=log2.counts.matrix[c(homologous.genes,NHEJ.genes,"Ar"),], 
          annotation_col=annotation.col,
          annotation_row = annotation.row,
          cluster_cols = TRUE,cluster_rows = TRUE,
-         main = "Z-Score of DNA Repair Associated Genes")
+         main = "log2 counts of DNA Repair Associated Genes")
 
 
 #Enrichment####
