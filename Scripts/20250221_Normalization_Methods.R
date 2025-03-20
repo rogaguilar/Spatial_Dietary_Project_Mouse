@@ -193,3 +193,15 @@ lapply(slides, function(slide) {
   rm(filt.obj)
   return(cat(paste("Saved seurat objects and plots for",slide,"\n",sep = "")))
 })
+
+ImageFeaturePlot(obj, features = c("Ar"))
+
+SpatialFeaturePlot(obj, features = "Ar",) + SpatialFeaturePlot(obj,features = "Psca")
+
+wrap_plots(SpatialDimPlot(obj,group.by = "BANKSY_snn_res.0.5"),
+           DimPlot(obj,group.by = "BANKSY_snn_res.0.5", label = TRUE),
+           SpatialFeaturePlot(obj, features = "Ar"),
+           SpatialFeaturePlot(obj, features = "Psca"))
+
+
+SpatialFeaturePlot(obj, features = c("Cd3d","Cd3e","Cd3g"))

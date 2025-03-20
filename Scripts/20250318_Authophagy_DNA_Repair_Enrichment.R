@@ -9,7 +9,7 @@ setwd("/Volumes/workl/Rogelio/")
 #Load packages and CSVs
 packages <- c("R.utils","hdf5r","arrow",
               "future","Seurat","SeuratData","SeuratWrappers","Banksy",
-              "tidyverse","patchwork","msigdbr","GSEABase","GSVA","pheatmap")
+              "tidyverse","patchwork","msigdbr","pheatmap")
 
 lapply(packages,library, character.only=TRUE)
 
@@ -42,7 +42,7 @@ csv <- read.csv(file = "./Analysis/Visium_Mouse_Tumor_All_Slide_Samples.csv") %>
   filter(Treatment == "RT"|Treatment == "CRRT"|Treatment == "CR_RT")
 slides <- unique(csv$Slide_Number)
 
-output.dir <- "./Analysis/BANKSY_Normalized_QC_Filtered/Autophagy_DNA_Repair"
+output.dir <- "./Analysis/BANKSY_Normalized_QC_Filtered_minUMI_25/Autophagy_DNA_Repair"
 
 if (!dir.exists(output.dir)) {
   dir.create(output.dir, recursive = TRUE)
@@ -54,7 +54,7 @@ if (!dir.exists(output.dir)) {
 autophagy.genes <- c("Ulk1", "Atg2a", "Lc3", "Becn1")
 
 #PDF output naming
-pdf(file = paste("./Analysis/BANKSY_Normalized_QC_Filtered/Autophagy_DNA_Repair/Autophagy_plots.pdf",sep = ""), 
+pdf(file = paste("./Analysis/BANKSY_Normalized_QC_Filtered_minUMI_25/Autophagy_DNA_Repair/Autophagy_plots.pdf",sep = ""), 
     width=17, height=22,paper = "USr")
 lapply(slides, function(slide) {
   sample.df <- csv %>% filter(Slide_Number == slide)
@@ -80,7 +80,7 @@ log2.counts.matrix <- csv %>%
   mutate(SampleID = paste(Slide_Number,Sample,sep = "_"))  %>%
   {lapply(.$SampleID, function(sample_name) {
     cat(paste("Loading object for ", sample_name,"\n",sep = ""))
-    spatial_object <- readRDS(file = paste("./Analysis/BANKSY_Normalized_QC_Filtered/",
+    spatial_object <- readRDS(file = paste("./Analysis/BANKSY_Normalized_QC_Filtered_minUMI_25/",
                                            sample_name,".rds",sep = ""))
     Idents(spatial_object) <- "BANKSY_snn_res.0.5"
     #Pseudobulk of Spatial Object
@@ -93,12 +93,18 @@ log2.counts.matrix <- csv %>%
     #Remove object to prevent memory overage on server
     rm(spatial_object)
     return(log2.counts)
-  })} %>% do.call(what = "cbind")
+  })} %>% do.call(what = "cbind") %>% rownames_to_column(var="gene")
 colnames(log2.counts.matrix) <- csv$SampleID
 
-write_csv(log2.counts.matrix,file = "./Analysis/BANKSY_Normalized_QC_Filtered/Autophagy_DNA_Repair/RT_CRRT_pseudobulk_log2cpm.csv")
+
+write_csv(log2.counts.matrix,file = "./Analysis/BANKSY_Normalized_QC_Filtered_minUMI_25/Autophagy_DNA_Repair/RT_CRRT_pseudobulk_log2cpm.csv")
 
 #Gene sets####
+
+#Read log2cpm file
+log2.counts.matrix <- read_csv(file = "./Analysis/BANKSY_Normalized_QC_Filtered_minUMI_25/Autophagy_DNA_Repair/RT_CRRT_pseudobulk_log2cpm.csv") %>%
+  column_to_rownames(var="gene")
+
 #Autophagy Genes
 autophagy.genes = c("Ulk1", "Ulk2", "Atg2a", "Ar2B", "Atg4a", "Atg4b", "Atg4c", 
                     "Atg4d", "Atg5","Becn1", "Atg7", "Lc3", "Gabarap", "Atg9a", 
@@ -125,12 +131,18 @@ rownames(gene.df) <- gene.df$Gene
 annotation.row <- select(gene.df,Pathway)
 
 #Plot z-score as heat map
-pheatmap(mat=log2.counts.matrix[c(homologous.genes,NHEJ.genes,"Ar"),], 
+counts.heatmap <- pheatmap(mat=log2.counts.matrix[c("Ar",homologous.genes,NHEJ.genes),], 
          annotation_col=annotation.col,
          annotation_row = annotation.row,
          cluster_cols = TRUE,cluster_rows = TRUE,
          main = "log2 counts of DNA Repair Associated Genes")
 
+zscore.heatmap <-pheatmap(mat=z.score[c("Ar",homologous.genes,NHEJ.genes),], 
+                          annotation_col=annotation.col,
+                          annotation_row = annotation.row,
+                          cluster_cols = FALSE,cluster_rows = FALSE,
+                          main = "Z-score of DNA Repair Associated Genes")
+counts.heatmap + zscore.heatmap
 
 #Enrichment####
 lapply(list(autophagy.genes,homologous.genes,NHEJ.genes), function(gene.set) {
